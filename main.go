@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/pthm/gate/cpu"
 	"log"
 	"os"
 
@@ -12,9 +13,9 @@ import (
 
 func main() {
 
-	cpu := NewCPU()
+	chip8 := cpu.NewCPU()
 	renderer := NewImageRenderer()
-	cpu.renderer = renderer
+	chip8.Renderer(renderer)
 
 	flag.Parse()
 	romPath := flag.Arg(0)
@@ -29,9 +30,9 @@ func main() {
 		fmt.Printf("Could not read ROM file at (%s): %v", romPath, err)
 		return
 	}
-	cpu.LoadROM(romBytes)
+	chip8.LoadROM(romBytes)
 
-	go cpu.Run(context.Background())
+	go chip8.Run(context.Background())
 
 	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
 	ebiten.SetWindowTitle("Gate (CHIP-8 Emulator)")

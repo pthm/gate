@@ -1,9 +1,17 @@
-package main
+package cpu
 
-import "fmt"
+import (
+	"fmt"
+)
 
-// 2NNN - Calls subroutine at NNN
-func op2NNN(cpu *CPU) {
+// Op00EE - Returns from a subroutine
+func Op00EE(cpu *CPU) {
+	cpu.sp--                   // Decrement the stack pointer so we are at the "top" of the stack
+	cpu.pc = cpu.stack[cpu.sp] // Set the PC to the value in at the "top" of the stack
+}
+
+// Op2NNN - Calls subroutine at NNN
+func Op2NNN(cpu *CPU) {
 	if cpu.sp >= uint16(len(cpu.stack)) {
 		fmt.Println("Stack overflow")
 		return // Prevent overflow
@@ -13,8 +21,8 @@ func op2NNN(cpu *CPU) {
 	cpu.pc = cpu.opcode & 0x0FFF // Set the program counter to the address NNN, we use the mask 0x0FFF to extract NNN
 }
 
-// 8XY4 - Adds VY to VX. VF is set to 1 when there's an overflow, and to 0 when there is not
-func op8XY4(cpu *CPU) {
+// Op8XY4 - Adds VY to VX. VF is set to 1 when there's an overflow, and to 0 when there is not
+func Op8XY4(cpu *CPU) {
 	x := (cpu.opcode & 0x0F00) >> 8 // Fetch X from the opcode, shift it 8 bits so its in the most significant bit
 	y := (cpu.opcode & 0x00F0) >> 4 // Fetch Y from the opcode, shift it 4 bits so its in the most significant bit
 
@@ -30,14 +38,14 @@ func op8XY4(cpu *CPU) {
 	cpu.pc += 2
 }
 
-// ANNN - Sets I to the address NNN
-func opANNN(cpu *CPU) {
+// OpANNN - Sets I to the address NNN
+func OpANNN(cpu *CPU) {
 	cpu.i = cpu.opcode & 0x0FFF // Set I to NNN
 	cpu.pc += 2                 // Increment the program counter by two
 }
 
-// FX33 - Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.
-func opFX33(cpu *CPU) {
+// OpFX33 - Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.
+func OpFX33(cpu *CPU) {
 	x := uint8((cpu.opcode & 0x0F00) >> 8)
 	vx := cpu.v[x]
 	cpu.memory[cpu.i] = vx / 100
@@ -46,19 +54,19 @@ func opFX33(cpu *CPU) {
 	cpu.pc += 2
 }
 
-// 00E0 - Clear screen
-func op00E0(cpu *CPU) {
+// Op00E0 - Clear screen
+func Op00E0(cpu *CPU) {
 	cpu.gfx = [64][32]uint8{}
 	cpu.pc += 2
 }
 
-// 1NNN - Jumps to address NNN
-func op1NNN(cpu *CPU) {
+// Op1NNN - Jumps to address NNN
+func Op1NNN(cpu *CPU) {
 	cpu.pc = cpu.opcode & 0x0FFF // Set the program counter to the address NNN, we use the mask 0x0FFF to extract NNN
 }
 
-// 6XNN - Sets VX to NN.
-func op6XNN(cpu *CPU) {
+// Op6XNN - Sets VX to NN.
+func Op6XNN(cpu *CPU) {
 	x := (cpu.opcode & 0x0F00) >> 8 // Fetch X from the opcode, shift it 8 bits so its in the most significant bit
 	nn := cpu.opcode & 0x00FF       // Fetch NN from the opcode
 
@@ -66,8 +74,8 @@ func op6XNN(cpu *CPU) {
 	cpu.pc += 2
 }
 
-// 7XNN - Adds NN to VX (carry flag is not changed).
-func op7XNN(cpu *CPU) {
+// Op7XNN - Adds NN to VX (carry flag is not changed).
+func Op7XNN(cpu *CPU) {
 	x := (cpu.opcode & 0x0F00) >> 8 // Fetch X from the opcode, shift it 8 bits so its in the most significant bit
 	nn := cpu.opcode & 0x00FF       // Fetch NN from the opcode
 
@@ -75,10 +83,10 @@ func op7XNN(cpu *CPU) {
 	cpu.pc += 2
 }
 
-// DXYN - Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels.
+// OpDXYN - Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels.
 // Each row of 8 pixels is read as bit-coded starting from memory location I; I value does not change after the execution of this instruction.
 // As described above, VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that does not happen
-func opDXYN(cpu *CPU) {
+func OpDXYN(cpu *CPU) {
 	vx := cpu.v[(cpu.opcode&0x0F00)>>8]   // VX (x-coordinate from register)
 	vy := cpu.v[(cpu.opcode&0x00F0)>>4]   // VY (y-coordinate from register)
 	numRows := uint8(cpu.opcode & 0x000F) // Height (N)
@@ -94,7 +102,6 @@ func opDXYN(cpu *CPU) {
 		}
 
 		spriteRow := cpu.memory[cpu.i+uint16(row)] // Fetch sprite row
-
 		for col := uint8(0); col < 8; col++ {
 			// Check if the bit at (col) is set
 			if (spriteRow & (0x80 >> col)) != 0 {
@@ -116,7 +123,5 @@ func opDXYN(cpu *CPU) {
 
 	// Set draw flag to refresh screen
 	cpu.drawFlag = true
-
-	// Increment program counter
 	cpu.pc += 2
 }

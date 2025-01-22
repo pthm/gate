@@ -1,4 +1,4 @@
-package main
+package cpu
 
 import (
 	"context"
@@ -135,34 +135,37 @@ func (cpu *CPU) cycle() {
 	case 0x0000: // The opcode starts with 0x0
 		switch cpu.opcode & 0x000F { // Get the last 4 bits
 		case 0x0000: // 0x00E0 - Clears the screen
-			op00E0(cpu)
+			Op00E0(cpu)
 		case 0x000E: // 0x00EE - Returns from a subroutine
-			fmt.Printf("Unimplemented opcode [0x00EE]: 0x%X\n", cpu.opcode)
-			//TODO: Implement
+			Op00EE(cpu)
 		default:
 			fmt.Printf("Unknown opcode [0x0000]: 0x%X\n", cpu.opcode)
 		}
-	case 0x1000:
-		op1NNN(cpu) // 1NNN - Jumps to address NNN
+	case 0x1000: // 1NNN - Jumps to address NNN
+		Op1NNN(cpu)
 	case 0x2000: // 2NNN - Calls subroutine at NNN
-		op2NNN(cpu)
+		Op2NNN(cpu)
 	case 0x6000: // 6XNN - Sets VX to NN
-		op6XNN(cpu)
+		Op6XNN(cpu)
 	case 0x7000: // 7XNN - Adds NN to VX (carry flag is not changed)
-		op7XNN(cpu)
+		Op7XNN(cpu)
 	case 0x8000: // Opcodes beginning with 8
 		switch cpu.opcode & 0x000F { // Get the last 4 bits
 		case 0x0004: // 0x8XY4 - Adds VY to VF, when there is an overflow set the carry to 1
-			op8XY4(cpu)
+			Op8XY4(cpu)
+		default:
+			fmt.Printf("Unknown opcode [0x8000]: 0x%X\n", cpu.opcode)
 		}
 	case 0xA000: //ANNN - Sets I to the address NNN
-		opANNN(cpu)
+		OpANNN(cpu)
 	case 0xD000: // DXYN - Draw a sprite at coordinate XY
-		opDXYN(cpu)
+		OpDXYN(cpu)
 	case 0xF000: // Opcodes starting with 0xF
 		switch cpu.opcode & 0x00FF {
 		case 0x0033:
-			opFX33(cpu)
+			OpFX33(cpu)
+		default:
+			fmt.Printf("Unknown opcode [0xF000]: 0x%X\n", cpu.opcode)
 		}
 	default:
 		fmt.Printf("Unknown opcode: 0x%X\n", cpu.opcode)
@@ -179,4 +182,8 @@ func (cpu *CPU) updateTimers() {
 		}
 		cpu.soundTimer--
 	}
+}
+
+func (cpu *CPU) Renderer(renderer Renderer) {
+	cpu.renderer = renderer
 }
