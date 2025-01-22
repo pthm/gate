@@ -145,14 +145,36 @@ func (cpu *CPU) cycle() {
 		Op1NNN(cpu)
 	case 0x2000: // 2NNN - Calls subroutine at NNN
 		Op2NNN(cpu)
+	case 0x3000: // 3XNN - Skips the next instruction if VX equals NN (usually the next instruction is a jump to skip a code block).
+		Op3XNN(cpu)
+	case 0x4000: // 4XNN - Skips the next instruction if VX does not equal NN (usually the next instruction is a jump to skip a code block)
+		Op4XNN(cpu)
+	case 0x5000: // 5XY0 - Skips the next instruction if VX equals VY (usually the next instruction is a jump to skip a code block)
+		Op5XY0(cpu)
 	case 0x6000: // 6XNN - Sets VX to NN
 		Op6XNN(cpu)
 	case 0x7000: // 7XNN - Adds NN to VX (carry flag is not changed)
 		Op7XNN(cpu)
 	case 0x8000: // Opcodes beginning with 8
 		switch cpu.opcode & 0x000F { // Get the last 4 bits
+		case 0x0000: // 0x8XY0 - Sets VX to the value of VY
+			Op8XY0(cpu)
+		case 0x0001: // 0x8XY1 - Sets VX to VX or VY
+			Op8XY1(cpu)
+		case 0x0002: // 0x8XY2 - Sets VX to VX and VY
+			Op8XY2(cpu)
+		case 0x0003: // 0x8XY3 - Sets VX to VX xor VY
+			Op8XY3(cpu)
 		case 0x0004: // 0x8XY4 - Adds VY to VF, when there is an overflow set the carry to 1
 			Op8XY4(cpu)
+		case 0x0005: // 0x8XY5 - VY is subtracted from VX. VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VX >= VY and 0 if not)
+			Op8XY5(cpu)
+		case 0x0006: // 0x8XY6 - Shifts VX right by one. VF is set to the least significant bit of VX before the shift.
+			Op8XY6(cpu)
+		case 0x0007: // 0x8XY7 - Sets VX to VY minus VX. VF is set to 0 when there's an underflow, and 1 when there is not. (i.e. VF set to 1 if VY >= VX and 0 if not)
+			Op8XY7(cpu)
+		case 0x000E: // 0x8XYE - Shifts VX left by one. VF is set to the most significant bit of VX before the shift.
+			Op8XYE(cpu)
 		default:
 			fmt.Printf("Unknown opcode [0x8000]: 0x%X\n", cpu.opcode)
 		}
