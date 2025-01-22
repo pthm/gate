@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
 
 type Renderer interface {
-	Render(gfx [64 * 32]uint8)
+	Render(gfx [64][32]uint8) error
 }
 
 type CPU struct {
@@ -16,7 +17,7 @@ type CPU struct {
 	i      uint16      // Index register - 16-bit register
 	pc     uint16      // Program counter - 16-bit register
 
-	gfx      [64 * 32]uint8 // Graphics - 64x32 monochrome display
+	gfx      [64][32]uint8 // Graphics - 64x32 monochrome display
 	drawFlag bool
 	renderer Renderer
 
@@ -53,7 +54,7 @@ func NewCPU() *CPU {
 		i:      0,
 		pc:     0x200, // Program counter starts at 0x200
 
-		gfx: [64 * 32]uint8{},
+		gfx: [64][32]uint8{},
 
 		delayTimer: 0,
 		soundTimer: 0,
@@ -76,49 +77,54 @@ func NewCPU() *CPU {
 }
 
 // LoadROM loads a ROM into memory, starting at 0x200
-func (cpu *CPU) LoadROM(rom []uint8) {
-	fmt.Println("Loading ROM")
+func (cpu *CPU) LoadROM(rom []uint8) error {
+	if len(rom) > len(cpu.memory)-0x200 {
+		return fmt.Errorf("ROM size exceeds available memory: %d bytes", len(rom))
+	}
 	for i, b := range rom {
 		cpu.memory[0x200+i] = b
 	}
+	fmt.Printf("Successfully loaded ROM (%d bytes) into memory\n", len(rom))
+	return nil
 }
 
 func (cpu *CPU) Reset() {
 	// Reset the CPU state
 }
 
-func (cpu *CPU) Run() {
+func (cpu *CPU) Run(ctx context.Context) {
 	clockTick := time.NewTicker(time.Second / 60) // 60Hz
-	done := make(chan bool)
 
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			case <-clockTick.C:
-				cpu.cycle()
-				cpu.updateTimers()
-				if cpu.drawFlag && cpu.renderer != nil {
+	for {
+		select {
+		case <-ctx.Done():
+			clockTick.Stop()
+			return
+		case <-clockTick.C:
+			cpu.cycle()
+			cpu.updateTimers()
+			if cpu.drawFlag {
+				if cpu.renderer != nil {
 					cpu.renderer.Render(cpu.gfx)
-					cpu.drawFlag = false
+				} else {
+					for y := 0; y < 32; y++ {
+						for x := 0; x < 64; x++ {
+							fmt.Printf("%d", cpu.gfx[x][y])
+						}
+						fmt.Println()
+					}
+					fmt.Println()
 				}
+				cpu.drawFlag = false
 			}
 		}
-	}()
-
-	// TODO: handle the lifecycle of the CPU externally
-	time.Sleep(30 * time.Second)
-	clockTick.Stop()
-	done <- true
+	}
 }
 
 func (cpu *CPU) cycle() {
 	// Fetch the opcode
 	// TODO: understand if there is a way of doing this without the cast, or if it impacts performance
 	cpu.opcode = uint16(cpu.memory[cpu.pc])<<8 | uint16(cpu.memory[cpu.pc+1])
-
-	fmt.Printf("= Cycle | PC 0x%X | Opcode 0x%X\n", cpu.pc, cpu.opcode)
 
 	// The opcodes are 2 bytes long and are stored in big-endian format, this means that the most significant byte is stored first
 
@@ -136,8 +142,14 @@ func (cpu *CPU) cycle() {
 		default:
 			fmt.Printf("Unknown opcode [0x0000]: 0x%X\n", cpu.opcode)
 		}
-	case 0x2000: //2NNN - Calls subroutine at NNN
+	case 0x1000:
+		op1NNN(cpu) // 1NNN - Jumps to address NNN
+	case 0x2000: // 2NNN - Calls subroutine at NNN
 		op2NNN(cpu)
+	case 0x6000: // 6XNN - Sets VX to NN
+		op6XNN(cpu)
+	case 0x7000: // 7XNN - Adds NN to VX (carry flag is not changed)
+		op7XNN(cpu)
 	case 0x8000: // Opcodes beginning with 8
 		switch cpu.opcode & 0x000F { // Get the last 4 bits
 		case 0x0004: // 0x8XY4 - Adds VY to VF, when there is an overflow set the carry to 1
@@ -155,7 +167,6 @@ func (cpu *CPU) cycle() {
 	default:
 		fmt.Printf("Unknown opcode: 0x%X\n", cpu.opcode)
 	}
-
 }
 
 func (cpu *CPU) updateTimers() {
@@ -168,11 +179,4 @@ func (cpu *CPU) updateTimers() {
 		}
 		cpu.soundTimer--
 	}
-}
-
-func (cpu *CPU) fetchOpcode() {
-}
-
-func (cpu *CPU) decodeOpcode() {
-
 }

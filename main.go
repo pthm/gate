@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -9,14 +10,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const (
-	screenWidth  = 64
-	screenHeight = 32
-)
-
 func main() {
 
 	cpu := NewCPU()
+	renderer := NewImageRenderer()
+	cpu.renderer = renderer
 
 	flag.Parse()
 	romPath := flag.Arg(0)
@@ -28,16 +26,16 @@ func main() {
 
 	romBytes, err := os.ReadFile(romPath)
 	if err != nil {
-		fmt.Printf("Could not read ROM file at (%s): %w", romPath, err)
+		fmt.Printf("Could not read ROM file at (%s): %v", romPath, err)
 		return
 	}
 	cpu.LoadROM(romBytes)
 
-	cpu.Run()
+	go cpu.Run(context.Background())
 
 	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
 	ebiten.SetWindowTitle("Gate (CHIP-8 Emulator)")
-	g := NewDisplay(screenWidth, screenHeight)
+	g := NewDisplay(renderer)
 	if err := ebiten.RunGame(g); err != nil {
 		log.Fatal(err)
 	}
