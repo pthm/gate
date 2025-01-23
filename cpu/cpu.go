@@ -178,12 +178,16 @@ func (cpu *CPU) cycle() {
 		default:
 			fmt.Printf("Unknown opcode [0x8000]: 0x%X\n", cpu.opcode)
 		}
+	case 0x9000:
+		Op9XY0(cpu)
 	case 0xA000: //ANNN - Sets I to the address NNN
 		OpANNN(cpu)
 	case 0xD000: // DXYN - Draw a sprite at coordinate XY
 		OpDXYN(cpu)
 	case 0xF000: // Opcodes starting with 0xF
 		switch cpu.opcode & 0x00FF {
+		case 0x001E:
+			OpFX1E(cpu)
 		case 0x0033:
 			OpFX33(cpu)
 		default:

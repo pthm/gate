@@ -12,6 +12,10 @@ func Op00E0(cpu *CPU) {
 
 // Op00EE - Returns from a subroutine
 func Op00EE(cpu *CPU) {
+	if cpu.sp == 0 {
+		fmt.Println("Stack underflow!")
+		return // Prevent underflow
+	}
 	cpu.sp--                   // Decrement the stack pointer so we are at the "top" of the stack
 	cpu.pc = cpu.stack[cpu.sp] // Set the PC to the value in at the "top" of the stack
 }
@@ -145,10 +149,7 @@ func Op8XY5(cpu *CPU) {
 	x := (cpu.opcode & 0x0F00) >> 8 // Fetch X from the opcode, shift it 8 bits so its in the most significant bit
 	y := (cpu.opcode & 0x00F0) >> 4 // Fetch Y from the opcode, shift it 4 bits so its in the most significant bit
 
-	// If VY is greater than the result of 255 - VY then there is an overflow, and we should set the carry to 1
-	// The registers are 8 bits, by doing 255 minus VY we are calculating how much "remaining space" there is
-	// in the register so we can determine if there will be an overflow
-	if cpu.v[x] >= cpu.v[x] {
+	if cpu.v[x] >= cpu.v[y] {
 		cpu.v[0xF] = 1 // Set carry to 1
 	} else {
 		cpu.v[0xF] = 0
@@ -162,7 +163,7 @@ func Op8XY6(cpu *CPU) {
 	x := (cpu.opcode & 0x0F00) >> 8 // Fetch X from the opcode, shift it 8 bits so its in the most significant bit
 
 	// Store the least significant bit in VF
-	cpu.v[0xF] = cpu.v[x] & 0x000F
+	cpu.v[0xF] = cpu.v[x] & 0x01
 	// Shift VX to the right
 	cpu.v[x] = cpu.v[x] >> 0x0001
 
@@ -186,7 +187,24 @@ func Op8XY7(cpu *CPU) {
 
 // Op8XYE - Shifts VX to the left by 1, then sets VF to 1 if the most significant bit of VX prior to that shift was set, or to 0 if it was unset
 func Op8XYE(cpu *CPU) {
-	panic("implement me")
+	x := (cpu.opcode & 0x0F00) >> 8 // Fetch X from the opcode, shift it 8 bits so its in the most significant bit
+
+	cpu.v[0xF] = (cpu.v[x] & 0x80) >> 7 // Set VF to the most significant bit of VX (prior to the shift)
+	cpu.v[x] <<= 1                      // Shift VX left by 1
+
+	cpu.pc += 2
+}
+
+// Op9XY0 - Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
+func Op9XY0(cpu *CPU) {
+	x := (cpu.opcode & 0x0F00) >> 8 // Fetch X from the opcode, shift it 8 bits so its in the most significant bit
+	y := (cpu.opcode & 0x00F0) >> 4 // Fetch Y from the opcode, shift it 4 bits so its in the most significant bit
+
+	if cpu.v[x] != cpu.v[y] {
+		cpu.pc += 2
+	}
+
+	cpu.pc += 2
 }
 
 // OpANNN - Sets I to the address NNN
@@ -235,6 +253,16 @@ func OpDXYN(cpu *CPU) {
 
 	// Set draw flag to refresh screen
 	cpu.drawFlag = true
+	cpu.pc += 2
+}
+
+// FX1E - Adds VX to I. VF is not affected
+func OpFX1E(cpu *CPU) {
+	x := (cpu.opcode & 0x0F00) >> 8 // Fetch X from the opcode, shift it 8 bits so its in the most significant bit
+	vx := cpu.v[x]
+
+	cpu.i += uint16(vx)
+
 	cpu.pc += 2
 }
 
