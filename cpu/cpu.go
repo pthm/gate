@@ -96,6 +96,7 @@ func (cpu *CPU) Run(ctx context.Context) {
 	clockTick := time.NewTicker(time.Second / 60) // 60Hz
 
 	for {
+		startTime := time.Now()
 		select {
 		case <-ctx.Done():
 			clockTick.Stop()
@@ -118,6 +119,9 @@ func (cpu *CPU) Run(ctx context.Context) {
 				cpu.drawFlag = false
 			}
 		}
+		duration := time.Since(startTime)
+		frequency := (time.Second / duration).Nanoseconds()
+		fmt.Printf("Cycle Freq: %dHz\n", frequency)
 	}
 }
 

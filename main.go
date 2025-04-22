@@ -28,7 +28,7 @@ func main() {
 	}
 	chip8.LoadROM(romBytes)
 
-	rlRenderer := renderer.NewRaylibRenderer(1400, 450)
+	rlRenderer := renderer.NewRaylibRenderer(64*16, 32*16)
 	chip8.SetRenderer(rlRenderer)
 
 	go chip8.Run(context.Background())
