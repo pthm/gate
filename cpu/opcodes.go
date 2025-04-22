@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"fmt"
+	rand2 "math/rand"
 )
 
 // Op00E0 - Clear screen
@@ -211,6 +212,24 @@ func Op9XY0(cpu *CPU) {
 func OpANNN(cpu *CPU) {
 	cpu.i = cpu.opcode & 0x0FFF // Set I to NNN
 	cpu.pc += 2                 // Increment the program counter by two
+}
+
+// OpBNNN - Jumps to the address NNN plus V0
+func OpBNNN(cpu *CPU) {
+	nnn := cpu.opcode & 0x0FFF // Use the mask 0x0FFF to extract NNN
+	v0 := cpu.v[0x0]           // Fetch V0
+	cpu.pc = nnn + uint16(v0)  // Set the program counter to the address NNN plus V0
+	cpu.pc += 2                // Increment the program counter by two
+}
+
+// OpCXNN - Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
+func OpCXNN(cpu *CPU) {
+	x := (cpu.opcode & 0x0F00) >> 8 // Fetch X from the opcode, shift it 8 bits so its in the most significant bit
+	nn := cpu.opcode & 0x00FF       // Use the make 0x0FF to extract NN
+	rand := rand2.Intn(255)
+
+	cpu.v[x] = uint8(nn & uint16(rand))
+	cpu.pc += 2
 }
 
 // OpDXYN - Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels.

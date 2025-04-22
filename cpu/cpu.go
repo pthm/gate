@@ -182,6 +182,10 @@ func (cpu *CPU) cycle() {
 		Op9XY0(cpu)
 	case 0xA000: //ANNN - Sets I to the address NNN
 		OpANNN(cpu)
+	case 0xB000:
+		OpBNNN(cpu) // BNNN - Jumps to the address NNN plus V0
+	case 0xC000:
+		OpCXNN(cpu) // CXNN - Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
 	case 0xD000: // DXYN - Draw a sprite at coordinate XY
 		OpDXYN(cpu)
 	case 0xF000: // Opcodes starting with 0xF
