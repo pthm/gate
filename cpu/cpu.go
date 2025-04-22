@@ -210,6 +210,6 @@ func (cpu *CPU) updateTimers() {
 	}
 }
 
-func (cpu *CPU) Renderer(renderer Renderer) {
+func (cpu *CPU) SetRenderer(renderer Renderer) {
 	cpu.renderer = renderer
 }
